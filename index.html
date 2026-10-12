@@ -12,7 +12,7 @@ button{background:var(--pr);color:#fff;border:0;font-weight:600;cursor:pointer}b
 .sec{background:var(--pr2);color:var(--pr)}.del{background:#fee2e2;color:var(--bad)}body.dark .del{background:#3b1d1d}
 .card{background:var(--card);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 4px #0000000f}
 .w{width:100%}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.mu{color:var(--mu);font-size:14px}
-.set{display:grid;grid-template-columns:28px 1fr 1fr 48px;gap:6px;align-items:center;margin:6px 0}.set input{width:100%;text-align:center}
+.set{display:grid;grid-template-columns:30px 1fr 1fr 50px 44px;gap:6px;align-items:center;margin:6px 0}.set input{width:100%;text-align:center}.u{padding:0;min-height:48px;font-size:15px}.u.lb{background:var(--gold);color:#fff}.kgn{grid-column:3/5;font-size:12px;color:var(--mu);text-align:center;margin-top:-4px}
 .last{color:var(--pr);font-size:14px;margin:4px 0}.badge{background:var(--gold);color:#fff;border-radius:99px;padding:2px 8px;font-size:12px;font-weight:700}
 .chip{display:inline-block;background:var(--pr2);color:var(--pr);border-radius:99px;padding:3px 10px;font-size:13px;margin:2px}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:5}
@@ -45,7 +45,7 @@ const vol=s=>s.ex.reduce((a,e)=>a+e.sets.reduce((b,x)=>b+num(x.r)*num(x.w),0),0)
 const same=(a,b)=>a.trim().toLowerCase()==b.trim().toLowerCase();
 function names(){const m=new Map();D.forEach(s=>s.ex.forEach(e=>{if(!m.has(e.name.toLowerCase()))m.set(e.name.toLowerCase(),e.name)}));R.forEach(r=>r.ex.forEach(e=>{const n=e.name||e;if(!m.has(n.toLowerCase()))m.set(n.toLowerCase(),n)}));return[...m.values()].sort()}
 function muscleOf(n){for(const s of D)for(const e of s.ex)if(same(e.name,n)&&e.muscle)return e.muscle;for(const r of R)for(const e of r.ex)if(same(e.name,n)&&e.muscle)return e.muscle;return''}
-function lastOf(n,excl){for(const s of D){if(s===excl)continue;const e=s.ex.find(e=>same(e.name,n));if(e&&e.sets.length)return{date:s.date,txt:e.sets.map(x=>`${x.r||0}×${x.w||0}kg`).join(', ')}}return null}
+function lastOf(n,excl){for(const s of D){if(s===excl)continue;const e=s.ex.find(e=>same(e.name,n));if(e&&e.sets.length)return{date:s.date,txt:e.sets.map(x=>`${x.r||0}×${fmtW(x)}`).join(', ')}}return null}
 function prOf(n,excl){let w=0,o=0;D.forEach(s=>{if(s===excl)return;s.ex.forEach(e=>{if(same(e.name,n))e.sets.forEach(x=>{w=Math.max(w,num(x.w));o=Math.max(o,e1rm(num(x.w),num(x.r)))})})});return{w,o}}
 function weekKey(d){const x=new Date(d+'T12:00');x.setDate(x.getDate()-((x.getDay()+6)%7));return ymd(x)}
 function stats(){const days=[...new Set(D.map(s=>s.date))],m=today().slice(0,7),wk=weekKey(today());
@@ -83,9 +83,14 @@ function home(){const s=stats();
  <div class=mu>${x.routine?'📋 '+esc(x.routine)+' · ':''}${esc(x.ex.map(e=>e.name).join(', ')||'(vacío)')}</div></div>`).join('')||'<p class=mu style="padding:0 6px">Aún no hay entrenamientos. ¡Empieza hoy! 💪</p>'}`}
 function pickBtns(t){const g={};R.forEach((r,i)=>{if(i==t)return;const k=PROGS[r.prog]||'Mis rutinas';(g[k]=g[k]||[]).push(`<button class=sec style="margin:4px 4px 0 0" onclick="nuevo(${i})">${esc(r.name)}</button>`)});return Object.entries(g).map(([k,v])=>`<div class=mu style="margin-top:6px">${k}</div>`+v.join('')).join('')}
 function nuevo(ri){const d=$('d').value||today();cur={date:d,ex:[]};
- if(ri!=null){const r=R[ri];cur.routine=r.name;cur.ex=r.ex.map(e=>{const l=lastSets(e.name),n=e.sets?adjSets(e,r.prog):(l||[1]).length,sets=[];for(let k=0;k<n;k++){const x=l&&(l[k]||l[l.length-1]);sets.push({r:x?x.r:'',w:x?x.w:''})}const o={name:e.name,muscle:e.muscle||'',sets};if(e.sets)o.t={sets:n,reps:e.reps||'',rir:weekRir(e,r.prog)||e.rir||'',rest:e.rest||0};if(e.ss)o.ss=e.ss;if(e.img)o.img=e.img;return o});if(blockWeek()>=1&&blockWeek()<=6)cur.week=blockWeek()}
+ if(ri!=null){const r=R[ri];cur.routine=r.name;cur.ex=r.ex.map(e=>{const l=lastSets(e.name),n=e.sets?adjSets(e,r.prog):(l||[1]).length,sets=[];for(let k=0;k<n;k++){const x=l&&(l[k]||l[l.length-1]);sets.push(x?cpSet(x):blankSet(e.name))}const o={name:e.name,muscle:e.muscle||'',sets};if(e.sets)o.t={sets:n,reps:e.reps||'',rir:weekRir(e,r.prog)||e.rir||'',rest:e.rest||0};if(e.ss)o.ss=e.ss;if(e.img)o.img=e.img;return o});if(blockWeek()>=1&&blockWeek()<=6)cur.week=blockWeek()}
  D.push(cur);save();render()}
-function lastSets(n,excl){for(const s of D){if(s===excl)continue;const e=s.ex.find(e=>same(e.name,n));if(e&&e.sets.length)return e.sets.map(x=>({r:x.r,w:x.w}))}return null}
+const LB=0.45359237,kgS=n=>(n||0).toLocaleString('es-CO',{maximumFractionDigits:1});
+function fmtW(x){return kgS(num(x.w))+' kg'+(x.u=='lb'&&x.lb!==''&&x.lb!=null?` (${kgS(num(x.lb))} lb)`:'')}
+function cpSet(x){const o={r:x.r,w:x.w};if(x.u=='lb'){o.u='lb';o.lb=x.lb}return o}
+function blankSet(n){const u=(S.units||{})[(n||'').toLowerCase()];return u=='lb'?{r:'',w:'',u:'lb',lb:''}:{r:'',w:''}}
+function toggleU(i,j){const e=cur.ex[i],x=e.sets[j];if(x.u=='lb'){delete x.u;delete x.lb}else{x.u='lb';x.lb=x.w===''?'':String(Math.round(num(x.w)/LB*10)/10)}S.units=S.units||{};S.units[e.name.toLowerCase()]=x.u||'kg';save();reEx(i)}
+function lastSets(n,excl){for(const s of D){if(s===excl)continue;const e=s.ex.find(e=>same(e.name,n));if(e&&e.sets.length)return e.sets.map(cpSet)}return null}
 function abrir(i){cur=D[i];render();scrollTo(0,0)}
 function edit(){const v=vol(cur);
  app.innerHTML=`<div class=row><button class=sec style="flex:0 0 auto" onclick="save();go('inicio')">← Listo</button><div style="text-align:right"><div class=mu>Volumen total</div><b id=vol>${Math.round(v).toLocaleString('es-CO')} kg</b></div></div>
@@ -105,18 +110,18 @@ function exCard(e,i){const pr=prOf(e.name,cur),l=lastOf(e.name,cur);
  ${e.t?`<div class=tg>🎯 <b>${e.t.sets} series</b> · ${esc(e.t.reps)} reps · RIR ${esc(e.t.rir)} · descanso ${fmtRest(e.t.rest)}</div>`:''}${ph?`<div class=prog>${ph}</div>`:''}
  ${l?`<div class=last>↺ Última vez (${l.date}): ${esc(l.txt)}</div>`:'<div class=mu>Primera vez con este ejercicio</div>'}
  ${pr.w?`<div class=mu>🏆 Récord: ${r1(pr.w)} kg · 1RM est. ${r1(pr.o)} kg</div>`:''}
- <div class="set mu" style="margin-top:8px"><span>#</span><span style="text-align:center">Reps</span><span style="text-align:center">Peso (kg)</span><span></span></div>
+ <div class="set mu" style="margin-top:8px"><span>#</span><span style="text-align:center">Reps</span><span style="text-align:center">Peso</span><span></span><span></span></div>
  ${e.sets.map((x,j)=>{const b=pr.w&&(num(x.w)>pr.w||e1rm(num(x.w),num(x.r))>pr.o+.01);
- return `<div class=set><span>${j+1}${b?' <span class=badge title="¡Nuevo récord!">PR</span>':''}</span><input type=number inputmode=numeric min=0 value="${esc(x.r)}" onchange="setV(${i},${j},'r',this.value)"><input type=number inputmode=decimal min=0 step=0.5 value="${esc(x.w)}" onchange="setV(${i},${j},'w',this.value)"><button class=del onclick="delSet(${i},${j})" aria-label="Quitar serie">−</button></div>`}).join('')}
+ return `<div class=set><span>${j+1}${b?' <span class=badge title="¡Nuevo récord!">PR</span>':''}</span><input type=number inputmode=numeric min=0 value="${esc(x.r)}" onchange="setV(${i},${j},'r',this.value)"><input type=number inputmode=decimal min=0 step=0.5 value="${esc(x.u=='lb'?x.lb:x.w)}" onchange="setV(${i},${j},'w',this.value)"><button class="u ${x.u=='lb'?'lb':'sec'}" onclick="toggleU(${i},${j})" aria-label="Cambiar unidad">${x.u=='lb'?'lb':'kg'}</button><button class=del onclick="delSet(${i},${j})" aria-label="Quitar serie">−</button>${x.u=='lb'&&x.lb!==''?`<span></span><span></span><div class=kgn>= ${kgS(num(x.w))} kg</div>`:''}</div>`}).join('')}
  <div class=row style="margin-top:6px"><button onclick="addSet(${i})">+ Serie</button><button class=sec onclick="tStart(${i})">⏱️ ${fmtRest(restOf(i))}</button></div>
  <input class=w placeholder="Nota (opcional)" value="${esc(e.note)}" style="margin-top:8px" onchange="cur.ex[${i}].note=this.value;save()"></div>`}
 function reEx(i){$('ex'+i).outerHTML=exCard(cur.ex[i],i);$('vol').textContent=Math.round(vol(cur)).toLocaleString('es-CO')+' kg'}
-function setV(i,j,k,v){const x=cur.ex[i].sets[j],had=prBeat(i);x[k]=v;save();reEx(i);if(!had&&prBeat(i)){navigator.vibrate?.([80,60,80]);toast('🏆 ¡Nuevo récord en '+cur.ex[i].name+'!')}}
+function setV(i,j,k,v){const x=cur.ex[i].sets[j],had=prBeat(i);if(k=='w'&&x.u=='lb'){x.lb=v;x.w=v===''?'':String(Math.round(num(v)*LB*10)/10)}else x[k]=v;save();reEx(i);if(!had&&prBeat(i)){navigator.vibrate?.([80,60,80]);toast('🏆 ¡Nuevo récord en '+cur.ex[i].name+'!')}}
 function prBeat(i){const e=cur.ex[i],pr=prOf(e.name,cur);return pr.w>0&&e.sets.some(x=>num(x.w)>pr.w||e1rm(num(x.w),num(x.r))>pr.o+.01)}
 function hint(){const n=$('n').value,l=n&&lastOf(n,cur);$('lv').textContent=l?`↺ Última vez (${l.date}): ${l.txt}`:'';const m=n&&muscleOf(n);if(m)$('mg').value=m}
-function addEx(){const n=$('n').value.trim();if(!n)return;cur.ex.push({name:n,muscle:$('mg').value.trim(),sets:lastSets(n)||[{r:'',w:''}]});save();edit();$('n').focus()}
+function addEx(){const n=$('n').value.trim();if(!n)return;cur.ex.push({name:n,muscle:$('mg').value.trim(),sets:lastSets(n)||[blankSet(n)]});save();edit();$('n').focus()}
 function delEx(i){if(confirm('¿Quitar "'+cur.ex[i].name+'"?')){cur.ex.splice(i,1);save();edit()}}
-function addSet(i){const s=cur.ex[i].sets,p=s[s.length-1]||{r:'',w:''};s.push({r:p.r,w:p.w});save();reEx(i);tStart(i)}
+function addSet(i){const s=cur.ex[i].sets,p=s[s.length-1]||blankSet(cur.ex[i].name);s.push(cpSet(p));save();reEx(i);tStart(i)}
 function restOf(i){const e=cur&&cur.ex[i];return e&&e.t&&e.t.rest||S.rest}
 function delSet(i,j){cur.ex[i].sets.splice(j,1);save();reEx(i)}
 function delSes(){if(confirm('¿Borrar este entrenamiento?')){D.splice(D.indexOf(cur),1);save();go('inicio')}}
