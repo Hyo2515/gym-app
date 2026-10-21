@@ -25,9 +25,9 @@ function setMode(x){S.mode=x;save();cur=null;cfCur=null;render();scrollTo(0,0)}
 const gymRender=render;
 render=function(){const cf=S.mode=='cf';$('mode').innerHTML=[['gym','🏋️ Gimnasio'],['cf','🔥 CrossFit']].map(([k,l])=>`<button class="${(S.mode||'gym')==k?'':'sec'}" onclick="setMode('${k}')">${l}</button>`).join('');
  document.querySelector('header h1').textContent=cf?'🔥 Mi CrossFit':'🏋️ Mi Gym';if(!cf)return gymRender();
- const tabs=[['wods','📝','WODs'],['rec','🏆','Récords'],['tim','⏱️','Timer'],['mas','⚙️','Más']];
+ const tabs=[['wods','📝','WODs'],['rec','🏆','Récords'],['rm','💪','RM'],['tim','⏱️','Timer'],['mas','⚙️','Más']];
  $('nav').innerHTML=tabs.map(([k,i,l])=>`<button class="${cfTab==k&&!cfCur?'on':''}" onclick="cfGo('${k}')"><b>${i}</b>${l}</button>`).join('');
- if(cfCur)return cfEdit();({wods:cfList,rec:cfRec,tim:cfTimer,mas:more})[cfTab]()};
+ if(cfCur)return cfEdit();({wods:cfList,rec:cfRec,rm:rmView,tim:cfTimer,mas:more})[cfTab]()};
 function cfGo(t){cfTab=t;cfCur=null;render();scrollTo(0,0)}
 function cfList(){app.innerHTML=`<button class=w onclick="cfNew()">➕ Registrar WOD</button><h2>Historial</h2>`+(C.w.length?C.w.map((w,i)=>`<div class="card item" onclick="cfOpen(${i})"><div class=row><b>${esc(w.name||w.type)}</b><span class=mu style="text-align:right">${fdate(w.date)}</span></div><div class=mu>${esc(w.type)}${w.cap?' · cap '+esc(w.cap)+' min':''} · ${w.mv.length} movimientos ${w.photo?'· 📷':''}</div><div class=last>${esc(resTxt(w))}</div></div>`).join(''):'<div class="card mu">Aún no hay WODs. Toca "Registrar WOD".</div>')}
 function cfNew(){cfCur={date:today(),type:'For Time',name:'',cap:'',mv:[],res:{},note:'',photo:''};render()}
@@ -54,6 +54,24 @@ function cfRec(){const bm={},mv={};C.w.forEach(w=>{const n=(w.name||'').trim(),k
  w.mv.forEach(x=>{const v=num(x.dw);if(v>0&&(!mv[x.n.toLowerCase()]||v>mv[x.n.toLowerCase()].v))mv[x.n.toLowerCase()]={v,n:x.n,d:w.date,u:x.du,lb:x.dlb}})});
  const row=(a,b,d)=>`<div class=row style="border-bottom:1px solid var(--bd);padding:6px 0"><span>${esc(a)}<div class=mu>${d}</div></span><b style="text-align:right">${esc(b)}</b></div>`;
  app.innerHTML=`<h2>🏆 WODs con nombre</h2><div class=card>${Object.values(bm).map(x=>row(x.n,x.t,x.d)).join('')||'<span class=mu>Ponle nombre a tus WODs (ej. Fran) para ver tu mejor marca.</span>'}</div><h2>💪 Peso máximo por movimiento</h2><div class=card>${Object.values(mv).sort((a,b)=>a.n.localeCompare(b.n)).map(x=>row(x.n,cfW(x.v,x.u,x.lb),x.d)).join('')||'<span class=mu>Aún no hay pesos registrados.</span>'}</div>`}
+// --- RM ---
+C.rm=C.rm||[];let rmF={reps:'1',u:(S.rmU||'kg')},rmSel='';
+function rmView(){const L=[...new Set(C.rm.map(x=>x.n))].sort();if(!rmSel||!L.some(n=>same(n,rmSel)))rmSel=L[0]||'';const lb=rmF.u=='lb';
+ const E=C.rm.map((x,i)=>({...x,i})).filter(x=>same(x.n,rmSel)).sort((a,b)=>a.date.localeCompare(b.date)),best={};E.forEach(x=>{if(!best[x.reps]||num(x.w)>num(best[x.reps].w))best[x.reps]=x});
+ const pts=E.map(x=>({d:x.date.slice(5),w:num(x.w),o:e1rm(num(x.w),num(x.reps))}));
+ app.innerHTML=`<h2>Registrar RM</h2><div class=card><input class=w id=rmn list=rml placeholder="🔎 Movimiento (ej. Back Squat)" value="${esc(rmF.n||'')}" oninput="rmF.n=this.value"><datalist id=rml>${[...MV['Barra'].split('|'),...C.mv].map(n=>`<option>${esc(n)}</option>`).join('')}</datalist>
+ <div class=row style="margin-top:8px">${['1','2','3','5'].map(r=>`<button class="${rmF.reps==r?'':'sec'}" onclick="rmF.reps='${r}';render()">${r}RM</button>`).join('')}<input inputmode=numeric placeholder="Otro" value="${['1','2','3','5'].includes(rmF.reps)?'':esc(rmF.reps)}" onchange="rmF.reps=this.value||'1';render()"></div>
+ <div style="display:grid;grid-template-columns:1fr 50px;gap:6px;margin-top:8px"><input id=rmw inputmode=decimal placeholder="Peso (${lb?'lb':'kg'})" value="${esc(rmF.v||'')}" oninput="rmF.v=this.value"><button class="u ${lb?'lb':'sec'}" onclick="rmF.u=${lb?"'kg'":"'lb'"};S.rmU=rmF.u;save();render()">${lb?'lb':'kg'}</button></div>
+ <input type=date class=w style="margin-top:8px" value="${rmF.date||today()}" onchange="rmF.date=this.value"><input class=w style="margin-top:8px" placeholder="Nota (opcional)" value="${esc(rmF.note||'')}" oninput="rmF.note=this.value">
+ <button class=w style="margin-top:8px" onclick="rmAdd()">💾 Guardar RM</button></div>
+ ${L.length?`<h2>Mis RM</h2><div class=card><select class=w onchange="rmSel=this.value;render()">${L.map(n=>`<option ${same(n,rmSel)?'selected':''}>${esc(n)}</option>`).join('')}</select>
+ <div class=stats style="margin-top:8px">${Object.keys(best).sort((a,b)=>a-b).map(r=>`<div class=stat><b>${kgS(num(best[r].w))}</b>${r}RM kg${best[r].u=='lb'?`<div class=mu>(${kgS(num(best[r].lb))} lb)</div>`:''}</div>`).join('')}</div></div>
+ <div class=card><b>Evolución</b> <span class=mu>— <span style="color:var(--gold)">● peso</span> <span style="color:var(--pr)">● 1RM est.</span></span>${chart(pts)}</div>
+ <div class=card><b>Historial</b>${[...E].reverse().map(x=>`<div class=row style="border-bottom:1px solid var(--bd);padding:6px 0"><span>${x.date} · ${esc(x.reps)}RM${x.note?`<div class=mu>${esc(x.note)}</div>`:''}</span><b style="text-align:right">${cfW(x.w,x.u,x.lb)}</b><button class=del style="flex:0" onclick="rmDel(${x.i})">✕</button></div>`).join('')}</div>`:''}`}
+function rmAdd(){const n0=(rmF.n||'').trim(),v=rmF.v;if(!n0||!num(v))return alert('Escribe el movimiento y el peso');const n=allMv().find(x=>same(x,n0))||n0;if(!allMv().some(x=>same(x,n))){C.mv.push(n)}
+ const lb=rmF.u=='lb',e={date:rmF.date||today(),n,reps:String(rmF.reps||'1'),w:String(lb?Math.round(num(v)*LB*10)/10:num(v)),note:rmF.note||''};if(lb){e.u='lb';e.lb=String(num(v))}
+ C.rm.push(e);cfSave();rmSel=n;rmF={n,reps:rmF.reps,u:rmF.u};toast('RM guardado ✅');render()}
+function rmDel(i){if(confirm('¿Borrar este registro de RM?')){C.rm.splice(i,1);cfSave();render()}}
 // --- timer ---
 let TM={on:0},TI=null,AC=null;
 function beep(l){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=l?660:880;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+(l?.6:.2))}catch(e){}navigator.vibrate?.(l?500:150)}
@@ -74,5 +92,5 @@ function tmShow(){const d=$('tmd');if(!d){return}if(!TM.on)return;let e=(Date.no
  d.textContent=txt;$('tml').textContent=lab}
 // --- copia de seguridad ---
 exp=function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'mi-gym',version:3,sessions:D,routines:R,crossfit:C})],{type:'application/json'}));a.download='gym-copia-'+today()+'.json';document.body.append(a);a.click();a.remove()};
-const gymImport=importText;importText=function(t){const x=JSON.parse(t);if(x&&x.crossfit&&Array.isArray(x.crossfit.w)){C={w:x.crossfit.w,mv:x.crossfit.mv||[]};cfSave()}gymImport(t)};
+const gymImport=importText;importText=function(t){const x=JSON.parse(t);if(x&&x.crossfit&&Array.isArray(x.crossfit.w)){C={w:x.crossfit.w,mv:x.crossfit.mv||[],rm:x.crossfit.rm||[]};cfSave()}gymImport(t)};
 render();
