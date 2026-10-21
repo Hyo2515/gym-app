@@ -27,9 +27,9 @@ function setMode(x){S.mode=x;save();cur=null;cfCur=null;render();scrollTo(0,0)}
 const gymRender=render;
 render=function(){const cf=S.mode=='cf';$('mode').innerHTML=[['gym','🏋️ Gimnasio'],['cf','🔥 CrossFit']].map(([k,l])=>`<button class="${(S.mode||'gym')==k?'':'sec'}" onclick="setMode('${k}')">${l}</button>`).join('');
  document.querySelector('header h1').textContent=cf?'🔥 Mi CrossFit':'🏋️ Mi Gym';if(!cf)return gymRender();
- const tabs=[['wods','📝','WODs'],['rec','🏆','Récords'],['rm','💪','RM'],['tim','⏱️','Timer'],['mas','⚙️','Más']];
+ const tabs=[['wods','📝','WODs'],['cal','📅','Calend.'],['rec','📈','Progreso'],['rm','💪','RM'],['tim','⏱️','Timer'],['mas','⚙️','Más']];
  $('nav').innerHTML=tabs.map(([k,i,l])=>`<button class="${cfTab==k&&!cfCur?'on':''}" onclick="cfGo('${k}')"><b>${i}</b>${l}</button>`).join('');
- if(cfCur)return cfCur._v?cfShow():cfEdit();({wods:cfList,rec:cfRec,rm:rmView,tim:cfTimer,mas:more})[cfTab]()};
+ if(cfCur)return cfCur._v?cfShow():cfEdit();({wods:cfList,rec:cfProg,cal:cfCal,rm:rmView,tim:cfTimer,mas:more})[cfTab]()};
 function cfGo(t){cfTab=t;cfCur=null;render();scrollTo(0,0)}
 function cfList(){app.innerHTML=`<button class=w onclick="cfNew()">➕ Registrar WOD</button><h2>Historial</h2>`+(C.w.length?C.w.map((w,i)=>`<div class="card item" onclick="cfOpen(${i})"><div class=row><b>${esc(w.name||w.type)}</b><span class=mu style="text-align:right">${fdate(w.date)}</span></div><div class=mu>${esc(w.type)}${w.rounds?' · '+esc(w.rounds)+' rondas':''}${w.cap?' · cap '+esc(w.cap)+' min':''} · ${w.mv.length} movimientos ${w.photo?'· 📷':''}</div><div class=last>${esc(resTxt(w))}</div></div>`).join(''):'<div class="card mu">Aún no hay WODs. Toca "Registrar WOD".</div>')}
 function cfNew(){cfCur={date:today(),type:'For Time',name:'',cap:'',mv:[],res:{},note:'',photo:''};render()}
@@ -57,13 +57,34 @@ function cfRec(){const bm={},mv={};C.w.forEach(w=>{const n=(w.name||'').trim(),k
  w.mv.forEach(x=>{const v=num(x.dw);if(v>0&&(!mv[x.n.toLowerCase()]||v>mv[x.n.toLowerCase()].v))mv[x.n.toLowerCase()]={v,n:x.n,d:w.date,u:x.du,lb:x.dlb}})});
  const row=(a,b,d)=>`<div class=row style="border-bottom:1px solid var(--bd);padding:6px 0"><span>${esc(a)}<div class=mu>${d}</div></span><b style="text-align:right">${esc(b)}</b></div>`;
  app.innerHTML=`<h2>🏆 WODs con nombre</h2><div class=card>${Object.values(bm).map(x=>row(x.n,x.t,x.d)).join('')||'<span class=mu>Ponle nombre a tus WODs (ej. Fran) para ver tu mejor marca.</span>'}</div><h2>💪 Peso máximo por movimiento</h2><div class=card>${Object.values(mv).sort((a,b)=>a.n.localeCompare(b.n)).map(x=>row(x.n,cfW(x.v,x.u,x.lb),x.d)).join('')||'<span class=mu>Aún no hay pesos registrados.</span>'}</div>`}
+// --- calendario y progreso ---
+let cfM=null,cfDay='';
+function cfStats(){const days=[...new Set(C.w.map(w=>w.date))],mo=today().slice(0,7),wk=weekKey(today()),wks=new Set(days.map(weekKey));let st=0,c=new Date(wk+'T12:00');if(!wks.has(wk))c.setDate(c.getDate()-7);while(wks.has(ymd(c))){st++;c.setDate(c.getDate()-7)}
+ return{month:C.w.filter(w=>w.date.startsWith(mo)).length,week:C.w.filter(w=>weekKey(w.date)==wk).length,st}}
+function cfCal(){const s=cfStats(),days=new Set(C.w.map(x=>x.date));cfM=cfM||today().slice(0,7);const[y,mm]=cfM.split('-').map(Number),f=new Date(y,mm-1,1),n=new Date(y,mm,0).getDate(),off=(f.getDay()+6)%7;let c='';for(let i=0;i<off;i++)c+='<div></div>';
+ for(let d=1;d<=n;d++){const k=`${cfM}-${String(d).padStart(2,'0')}`;c+=`<div class="${days.has(k)?'t':''} ${k==today()?'hoy':''}" ${days.has(k)?`onclick="cfDay='${k}';render()"`:''}>${d}</div>`}
+ const L=C.w.map((w,i)=>({w,i})).filter(x=>x.w.date==cfDay);
+ app.innerHTML=`<div class=card><div class=stats><div class=stat><b>${s.week}</b>esta semana</div><div class=stat><b>${s.month}</b>este mes</div><div class=stat><b>${s.st}</b>semanas seguidas 🔥</div></div></div>
+ <div class=card><div class=row><button class=sec style="flex:0 0 48px" onclick="cfMv(-1)">‹</button><b style="text-align:center;text-transform:capitalize">${f.toLocaleDateString('es-CO',{month:'long',year:'numeric'})}</b><button class=sec style="flex:0 0 48px" onclick="cfMv(1)">›</button></div>
+ <div class=cal style="margin-top:10px">${['L','M','M','J','V','S','D'].map(x=>`<div class=h>${x}</div>`).join('')}${c}</div><div class=mu style="margin-top:8px;text-align:center">${C.w.filter(w=>w.date.startsWith(cfM)).length} WODs en este mes · toca un día marcado</div></div>
+ ${L.map(x=>`<div class="card item" onclick="cfOpen(${x.i})"><b>${esc(x.w.name||x.w.type)}</b><div class=mu>${fdate(x.w.date)} · ${esc(x.w.type)}</div><div class=last>${esc(resTxt(x.w))}</div></div>`).join('')}`}
+function cfMv(d){const[y,mm]=cfM.split('-').map(Number),x=new Date(y,mm-1+d,1);cfM=ymd(x).slice(0,7);render()}
+function cfProg(){const W=[];let c=new Date(weekKey(today())+'T12:00');for(let i=0;i<8;i++){const k=ymd(c);W.unshift({k,n:C.w.filter(w=>weekKey(w.date)==k).length});c.setDate(c.getDate()-7)}
+ const mx=Math.max(1,...W.map(x=>x.n)),bars=`<svg viewBox="0 0 320 140" style="width:100%;margin-top:8px">${W.map((x,i)=>`<rect x=${i*40+6} y=${115-x.n/mx*95} width=28 height=${x.n/mx*95} rx=4 fill="var(--pr)"/><text x=${i*40+20} y=${110-x.n/mx*95} font-size=11 text-anchor=middle fill="var(--tx)">${x.n||''}</text><text x=${i*40+20} y=132 font-size=9 text-anchor=middle fill="var(--mu)">${x.k.slice(8)}/${x.k.slice(5,7)}</text>`).join('')}</svg>`;
+ const bm={};[...C.w].sort((a,b)=>a.date.localeCompare(b.date)).forEach(w=>{const n=(w.name||'').trim(),k=rk(w.type),r=w.res||{};if(!n)return;let v=null;if(k=='time'&&r.t)v=-tSec(r.t);else if(k=='amrap'&&(r.r||r.rp))v=num(r.r)*1000+num(r.rp);else if(k=='reps'&&r.rp)v=num(r.rp);if(v==null)return;const o=bm[n.toLowerCase()]=bm[n.toLowerCase()]||{n,f:resTxt(w),fv:v,b:resTxt(w),bv:v,c:0};o.c++;if(v>o.bv){o.bv=v;o.b=resTxt(w)}});
+ const rm={};[...C.rm].sort((a,b)=>a.date.localeCompare(b.date)).forEach(x=>{const e=e1rm(num(x.w),num(x.reps)),o=rm[x.n.toLowerCase()]=rm[x.n.toLowerCase()]||{n:x.n,f:e,b:e};o.b=Math.max(o.b,e)});
+ const row=(a,b)=>`<div class=row style="border-bottom:1px solid var(--bd);padding:6px 0"><span>${a}</span><b style="text-align:right">${b}</b></div>`;
+ app.innerHTML=`<div class=card><b>WODs por semana</b> <span class=mu>(últimas 8)</span>${bars}</div>
+ <h2>📈 Mejoras en WODs con nombre</h2><div class=card>${Object.values(bm).filter(o=>o.c>1).map(o=>row(esc(o.n)+`<div class=mu>${o.c} veces · primera: ${esc(o.f)}</div>`,(o.bv>o.fv?'⬆️ ':'')+esc(o.b))).join('')||'<span class=mu>Repite un WOD con nombre para ver tu mejora.</span>'}</div>
+ <h2>💪 Progreso en RM</h2><div class=card>${Object.values(rm).map(o=>row(esc(o.n)+`<div class=mu>1RM estimado · inicio ${kgS(r1(o.f))} kg</div>`,kgS(r1(o.b))+' kg'+(o.b>o.f?` <span class=badge>+${kgS(r1(o.b-o.f))}</span>`:''))).join('')||'<span class=mu>Registra RM en la pestaña 💪 RM.</span>'}</div><div id=recs></div>`;
+ const h=app.innerHTML;cfRec();app.innerHTML=h.replace('<div id="recs"></div>',app.innerHTML)}
 // --- RM ---
 C.rm=C.rm||[];let rmF={reps:'1',u:(S.rmU||'kg')},rmSel='';
 function rmView(){const L=[...new Set(C.rm.map(x=>x.n))].sort();if(!rmSel||!L.some(n=>same(n,rmSel)))rmSel=L[0]||'';const lb=rmF.u=='lb';
  const E=C.rm.map((x,i)=>({...x,i})).filter(x=>same(x.n,rmSel)).sort((a,b)=>a.date.localeCompare(b.date)),best={};E.forEach(x=>{if(!best[x.reps]||num(x.w)>num(best[x.reps].w))best[x.reps]=x});
  const pts=E.map(x=>({d:x.date.slice(5),w:num(x.w),o:e1rm(num(x.w),num(x.reps))}));
  app.innerHTML=`<h2>Registrar RM</h2><div class=card><input class=w id=rmn list=rml placeholder="🔎 Movimiento (ej. Back Squat)" value="${esc(rmF.n||'')}" oninput="rmF.n=this.value"><datalist id=rml>${[...MV['Barra'].split('|'),...C.mv].map(n=>`<option>${esc(n)}</option>`).join('')}</datalist>
- <div class=row style="margin-top:8px">${['1','2','3','5'].map(r=>`<button class="${rmF.reps==r?'':'sec'}" onclick="rmF.reps='${r}';render()">${r}RM</button>`).join('')}<input inputmode=numeric placeholder="Otro" value="${['1','2','3','5'].includes(rmF.reps)?'':esc(rmF.reps)}" onchange="rmF.reps=this.value||'1';render()"></div>
+ <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px">${['1','2','3','5'].map(r=>`<button class="${rmF.reps==r?'':'sec'}" onclick="rmF.reps='${r}';render()">${r}RM</button>`).join('')}<input style="min-width:0;width:100%;padding:6px" inputmode=numeric placeholder="Otro" value="${['1','2','3','5'].includes(rmF.reps)?'':esc(rmF.reps)}" onchange="rmF.reps=this.value||'1';render()"></div>
  <div style="display:grid;grid-template-columns:1fr 50px;gap:6px;margin-top:8px"><input id=rmw inputmode=decimal placeholder="Peso (${lb?'lb':'kg'})" value="${esc(rmF.v||'')}" oninput="rmF.v=this.value"><button class="u ${lb?'lb':'sec'}" onclick="rmF.u=${lb?"'kg'":"'lb'"};S.rmU=rmF.u;save();render()">${lb?'lb':'kg'}</button></div>
  <input type=date class=w style="margin-top:8px" value="${rmF.date||today()}" onchange="rmF.date=this.value"><input class=w style="margin-top:8px" placeholder="Nota (opcional)" value="${esc(rmF.note||'')}" oninput="rmF.note=this.value">
  <button class=w style="margin-top:8px" onclick="rmAdd()">💾 Guardar RM</button></div>
