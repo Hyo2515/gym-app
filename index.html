@@ -25,7 +25,7 @@ nav button{flex:1;background:none;color:var(--mu);border-radius:0;font-size:12px
 h2{font-size:18px;margin:16px 4px 6px}.item{cursor:pointer}
 </style></head><body>
 <header><h1>🏋️ Mi Gym</h1><button onclick="toggleDark()" aria-label="Modo oscuro">🌓</button></header>
-<main id="app"></main>
+<div id="mode" class="row" style="padding:10px 12px 0;max-width:640px;margin:auto"></div><main id="app"></main>
 <div id="timer"><span>⏱️</span><b id="tt">0:00</b><button class=sec onclick="tAdd(30)">+30</button><button class=del onclick="tStop()">✕</button></div>
 <nav id="nav"></nav>
 <script src="defaults.js"></script>
@@ -174,4 +174,4 @@ function tStop(){clearInterval(tInt);$('timer').style.display='none'}
 function tTick(){const l=Math.max(0,Math.ceil((tEnd-Date.now())/1000));$('tt').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');if(!l){tStop();navigator.vibrate?.([400,150,400,150,400]);toast('⏱️ ¡Descanso terminado!')}}
 function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;left:50%;top:76px;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 18px;border-radius:12px;z-index:9;font-weight:600;box-shadow:0 4px 14px #0005';document.body.append(t);setTimeout(()=>t.remove(),2500)}
 seed();applyDark();render();if('serviceWorker'in navigator&&location.protocol!='file:'){navigator.serviceWorker.register('sw.js');let r0=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(r0&&!cur)location.reload();r0=true})}
-</script></body></html>
+</script><script src="crossfit.js"></script></body></html>
